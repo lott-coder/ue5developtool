@@ -1,0 +1,69 @@
+{
+  "name": "workflow-validate",
+  "description": "校验规格增量（_tmp/07-spec-delta.md）与活规格（spec/{module}.md）的格式与引用一致性。由 AI工具链/tools/spec_tool.py 确定性执行（C1-C8），不再依赖人工逐条比对。",
+  "usage": "/workflow validate [module]",
+  "tool": {
+    "path": "AI工具链/tools/spec_tool.py",
+    "command": "python AI工具链/tools/spec_tool.py validate --module {module}",
+    "exit_codes": { "0": "通过", "1": "校验失败", "2": "用法/环境错误", "3": "缺基线或锁冲突" }
+  },
+  "inputs": {
+    "delta": "change/{module}/_tmp/07-spec-delta.md",
+    "spec": "spec/{module}.md"
+  },
+  "checks": [
+    {
+      "id": "C1",
+      "name": "delta 操作合法",
+      "logic": "delta 中每个 `## ` 标题必须匹配 `## (ADDED|MODIFIED|REMOVED) R{n} — 标题`，n 为正整数。缺操作词、ID 非 R 前缀、缺破折号分隔，均判失败。",
+      "severity": "error"
+    },
+    {
+      "id": "C2",
+      "name": "MODIFIED/REMOVED 引用存在",
+      "logic": "MODIFIED R{n} / REMOVED R{n} 引用的 R{n} 必须在现存 spec 中存在（防改/删幽灵需求）。",
+      "severity": "error"
+    },
+    {
+      "id": "C3",
+      "name": "ADDED 不与现存冲突",
+      "logic": "ADDED R{n} 不得与现存 spec 中已有 ID 重复（防覆盖既有需求）。",
+      "severity": "error"
+    },
+    {
+      "id": "C4",
+      "name": "spec 内 ID 唯一",
+      "logic": "现存 spec 内所有 R{n} 唯一。此检查是『MODIFIED 被误当 ADDED 追加』的唯一兜底。",
+      "severity": "error"
+    },
+    {
+      "id": "C5",
+      "name": "每需求至少一场景",
+      "logic": "每个 ADDED/MODIFIED 需求块下至少一个 `### 场景:`。REMOVED 无需场景。",
+      "severity": "error"
+    },
+    {
+      "id": "C6",
+      "name": "场景「当…则…」完整",
+      "logic": "每个 `### 场景:` 小节须同时含「当」与「则」。",
+      "severity": "error"
+    },
+    {
+      "id": "C7",
+      "name": "权威端校验（启发式）",
+      "logic": "「则」不得只落在表现层（客户端/UI/界面/UMG/蓝图/Widget/显示/本地），须出现权威端词（服务端/服务器/HasAuthority/Gameplay/Application/写入口/权威）。仅警告，交 plan-reviewer 复核。",
+      "severity": "warning"
+    },
+    {
+      "id": "C8",
+      "name": "spec 标题卫生",
+      "logic": "现存 spec 的标题不得残留 ADDED/MODIFIED/REMOVED 前缀（`## ADDED R3` 属脏标题）。这是对存量基线的体检项，源包真实活规格中曾出现 11 处。",
+      "severity": "error"
+    }
+  ],
+  "output": {
+    "pass": "C1-C8 通过，可归档合并",
+    "fail": "列出失败 check（id + 行号 + 原文），写入 change/{module}/_tmp/05-issues.md，阻断 archive"
+  },
+  "notes": "本命令是确定性检查，结论以工具 stdout 为准。warning 级不阻断但必须在报告中提示。禁止用人工目视替代——跳过不会有任何报错，损坏是静默的。"
+}

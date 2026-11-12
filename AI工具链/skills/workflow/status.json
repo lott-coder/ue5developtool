@@ -1,0 +1,47 @@
+{
+  "name": "workflow-status",
+  "description": "只读查询工作流状态：当前迭代、文档完成度、各子分类概览、最近审核结果、spec 基线与知识库同步情况。",
+  "usage": "/workflow status [module]",
+  "steps": [
+    {
+      "step": 1,
+      "action": "读全局索引",
+      "command": "Read change/versions.json",
+      "extract": ["modules", "status", "currentSubCategory"]
+    },
+    {
+      "step": 2,
+      "action": "列出进行中迭代",
+      "logic": "筛出 status=wip 的模块；每个输出 change/{module}/version.json 的 currentSubCategory 与 _tmp/ 下已存在文档清单。"
+    },
+    {
+      "step": 3,
+      "action": "计算文档完成度",
+      "logic": "对 _tmp/ 下 01-06（及 07 若存在）逐个判断：文件存在且非模板占位（正文行数 > 10 且不含「<!-- TODO -->」）计为已完成。输出如 01✓ 02✓ 03◐ 04✗ 05✗ 06✗ 07✓。"
+    },
+    {
+      "step": 4,
+      "action": "读取最近审核结论",
+      "logic": "读 04-review-report.md 最后一个二级标题下的「审核结果」与严重度汇总行；无报告时输出「未审核」。"
+    },
+    {
+      "step": 5,
+      "action": "检查 spec 基线",
+      "logic": "列出 spec/ 下存在的 {module}.md，报告各自头部版本戳与 R 编号数量；缺失则标注「无基线（首次归档时生成）」。"
+    },
+    {
+      "step": 6,
+      "action": "检查知识库同步",
+      "logic": "对比 knowledge/{module}.md 的「最后更新」日期与该模块最近归档版本日期；落后则标注「知识库待同步」。"
+    },
+    {
+      "step": 7,
+      "action": "输出摘要",
+      "logic": "输出：当前模块与版本、阶段位置、文档完成度、审核结论、spec 基线、知识库状态、下一步建议命令（plan / verify / archive）。只读，不修改任何文件。"
+    }
+  ],
+  "output": {
+    "format": "表格 + 一行「下一步」建议",
+    "readonly": true
+  }
+}

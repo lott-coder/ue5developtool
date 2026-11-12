@@ -1,0 +1,17 @@
+# 统一用 LF，避免 Windows/macOS 协作时整文件 diff
+* text=auto eol=lf
+
+# 文档按文本处理（本包的 99% 内容）
+*.md   text eol=lf
+*.json text eol=lf
+*.py   text eol=lf diff=python
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# 明确的二进制
+*.uasset binary
+*.umap   binary
+
+# GitHub 语言统计：不把文档算成代码
+*.md linguist-documentation

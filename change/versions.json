@@ -1,0 +1,42 @@
+{
+  "$comment": "全局版本索引。模块名必须与 开发规范/架构.md §6 模块分类表一致。status: idle | wip",
+  "schemaVersion": 1,
+  "updatedAt": "2026-11-12",
+  "modules": {
+    "core": {
+      "currentSubCategory": null,
+      "status": "idle",
+      "subCategories": {}
+    },
+    "data": {
+      "currentSubCategory": null,
+      "status": "idle",
+      "subCategories": {}
+    },
+    "economy": {
+      "currentSubCategory": null,
+      "status": "idle",
+      "subCategories": {}
+    },
+    "progression": {
+      "currentSubCategory": null,
+      "status": "idle",
+      "subCategories": {}
+    },
+    "ui": {
+      "currentSubCategory": null,
+      "status": "idle",
+      "subCategories": {}
+    },
+    "audio": {
+      "currentSubCategory": null,
+      "status": "idle",
+      "subCategories": {}
+    },
+    "_misc": {
+      "currentSubCategory": null,
+      "status": "idle",
+      "subCategories": {}
+    }
+  }
+}

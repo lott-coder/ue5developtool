@@ -1,0 +1,50 @@
+# ── 工具链仓库自身 ─────────────────────────────
+# 本仓库是"文档 + 少量 Python 工具"的发布包，不含引擎工程产物。
+# 下列规则覆盖两类场景：
+#   1) 在本目录直接维护（比如跑 spec_tool.py）
+#   2) 本包被解包进 UE5 工程后，复用同一份忽略规则
+
+# ── Python（tools/spec_tool.py）────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# ── Unreal Engine 构建产物 ─────────────────────
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+Build/Receipts/
+*.sln
+*.suo
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+.vs/
+.vscode/
+.idea/
+*.target
+*.uprojectdirs
+
+# ── 编辑器 / 系统杂项 ──────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+*.tmp
+*.bak
+*.log
+
+# ── 本地个人配置（不入库）──────────────────────
+.env
+.env.local
+AGENTS.local.md
+CLAUDE.local.md

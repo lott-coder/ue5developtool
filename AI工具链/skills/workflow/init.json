@@ -1,0 +1,64 @@
+{
+  "name": "workflow-init",
+  "description": "在模块目录的 _tmp/ 下创建迭代文档模板。支持模块/子分类参数。",
+  "usage": "/workflow init <major|minor|patch> [module] [subCategory]",
+  "steps": [
+    {
+      "step": 1,
+      "action": "读取全局版本索引",
+      "command": "Read change/versions.json",
+      "extract": ["modules"]
+    },
+    {
+      "step": 2,
+      "action": "解析模块",
+      "logic": "显式参数 > 关键词推断 > 询问用户 > _misc。关键词表：数据/存档/持久化/Save/Profile/schema→data；商店/购买/内购/货币/结算/退款/economy→economy；等级/经验/解锁/进度/Progression→progression；界面/HUD/UI/弹窗/面板→ui；音效/BGM/SFX/Audio→audio；启动/生命周期/核心/Core→core。模块名必须是 开发规范/架构.md §6 模块分类表中的一项；不在表中则先提示用户更新该表。"
+    },
+    {
+      "step": 3,
+      "action": "检查并创建模块目录",
+      "logic": "若 change/{module}/ 不存在，创建 change/{module}/_tmp/ 与 change/{module}/version.json，初始内容 {module, currentSubCategory: null, status: idle, subCategories: {}}。若 _tmp/ 下已有文件（已有进行中迭代），提示用户先 archive 或换模块，不得覆盖。"
+    },
+    {
+      "step": 4,
+      "action": "解析子分类并计算版本号",
+      "logic": "subCategory 解析顺序：显式 > 关键词推断 > 询问用户。命名要求：小写连字符、功能精准描述（如 purchase、schema-migration），禁止 v1/fix/misc 之类。若子分类已存在（优化迭代），把该子分类最新文档复制到 _tmp/ 作为起点。版本递增：major=v{X+1}.0.0，minor=v{x.Y+1}.0，patch=v{x.y.Z+1}；新子分类从 v0.0.1 起。"
+    },
+    {
+      "step": 5,
+      "action": "创建 6 个标准文档",
+      "logic": "从 模板/ 复制 01-requirements.md ~ 06-knowledge-update.md 到 change/{module}/_tmp/。07-spec-delta.md 到 Phase 2 才产出，不预建（避免空文件被误判为已完成）。"
+    },
+    {
+      "step": 6,
+      "action": "更新模块 version.json",
+      "logic": "currentSubCategory 设为当前子分类，status=wip。"
+    },
+    {
+      "step": 7,
+      "action": "更新全局 versions.json",
+      "logic": "modules.{module}.currentSubCategory = 当前子分类，status=wip。"
+    },
+    {
+      "step": 8,
+      "action": "回写工作计划（若存在）",
+      "logic": "若 docs/WorkPlan_*.md 存在（取版本号最高者），定位同时含 `{module}` 与 `{subCategory}` 的表格行，把 `☐ 未开始` 改为 `◐ 进行中 wip`，并刷新顶部进度统计行。未匹配则跳过，不阻断。"
+    }
+  ],
+  "output": {
+    "success": "工作流初始化完成: v{X.Y.Z} [{module}/{subCategory}]",
+    "files_created": [
+      "change/{module}/_tmp/01-requirements.md",
+      "change/{module}/_tmp/02-design.md",
+      "change/{module}/_tmp/03-plan.md",
+      "change/{module}/_tmp/04-review-report.md",
+      "change/{module}/_tmp/05-issues.md",
+      "change/{module}/_tmp/06-knowledge-update.md"
+    ]
+  },
+  "guards": [
+    "同一模块 _tmp/ 同时只允许一组迭代文档",
+    "不得覆盖已存在的 _tmp/ 内容",
+    "模块名不在 架构.md §6 分类表时先要求更新分类表"
+  ]
+}

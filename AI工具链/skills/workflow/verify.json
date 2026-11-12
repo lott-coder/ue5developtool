@@ -1,0 +1,39 @@
+{
+  "name": "workflow-verify",
+  "description": "手动触发指定阶段的独立审核，结果追加写入 04-review-report.md。",
+  "usage": "/workflow verify <requirements|design|plan>",
+  "steps": [
+    {
+      "step": 1,
+      "action": "定位迭代目录",
+      "logic": "读 change/versions.json 找到 status=wip 的模块，迭代目录为 change/{module}/_tmp/。多个 wip 时询问用户选哪个。"
+    },
+    {
+      "step": 2,
+      "action": "选择审核对象",
+      "logic": "按 phase 映射：requirements→01-requirements.md；design→02-design.md（关联 01）；plan→03-plan.md（关联 01+02）。文档不存在则终止并提示先产出该文档。"
+    },
+    {
+      "step": 3,
+      "action": "调用 plan-reviewer",
+      "logic": "Agent(\"plan-reviewer\", prompt=\"审核类型: {phase}\\n文档: {路径}\\n关联文档: {路径}\\n引擎: UE5\\n规范: 开发规范/架构.md, 开发规范/编码约定.md, 开发规范/验证与门禁.md\")。要求输出带严重度标签（blocking/warning/info）。"
+    },
+    {
+      "step": 4,
+      "action": "写入审核报告",
+      "logic": "把结果以二级标题追加到 change/{module}/_tmp/04-review-report.md（文件不存在则创建）。已有同阶段报告时追加而非覆盖，保留历史轮次。"
+    },
+    {
+      "step": 5,
+      "action": "展示并等待确认",
+      "logic": "交互模式下用 AskUserQuestion 展示：审核类型/结果/阻断数/警告数/关键风险/核心建议，选项为「确认通过」「修复后重审」「讨论详情」。--unattended 模式改为按严重度矩阵自动决策（见 开发规范/无人值守安全.md），并把决策记入报告的「无人值守自动决策记录」表。"
+    }
+  ],
+  "output": {
+    "success": "{phase} 审核完成，报告已写入 change/{module}/_tmp/04-review-report.md"
+  },
+  "guards": [
+    "审核后禁止直接进入下一阶段（交互模式必须等用户确认）",
+    "禁止只返回报告文本而不写文件"
+  ]
+}

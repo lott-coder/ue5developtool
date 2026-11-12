@@ -1,0 +1,65 @@
+{
+  "name": "workflow-archive",
+  "description": "归档已完成迭代：把 _tmp 归入子分类目录，并把 07-spec-delta 合并进活规格 spec/{module}.md（活规格唯一更新入口）。合并由 AI工具链/tools/spec_tool.py 确定性执行——不要再手工合并。",
+  "usage": "/workflow archive [subCategory]",
+  "tool": {
+    "path": "AI工具链/tools/spec_tool.py",
+    "requires": "Python 3（无第三方依赖）",
+    "reason": "手工（提示词）合并有三类稳定缺陷：ADDED 前缀被写进 spec、MODIFIED 后看不出改动、中断后状态不一致。工具化后合并可测、可回滚、可重跑。"
+  },
+  "steps": [
+    {
+      "step": 1,
+      "action": "定位当前迭代",
+      "logic": "读 change/{module}/version.json 的 currentSubCategory；为 null 或 status != wip 则提示无进行中迭代并终止。再确认 change/{module}/_tmp/ 存在。"
+    },
+    {
+      "step": 2,
+      "action": "先看 dry-run（强制）",
+      "command": "python AI工具链/tools/spec_tool.py merge --module {module} --version {vX.Y.Z} --subcategory {subCategory}",
+      "logic": "向用户展示将合并出的 spec 文本与条数，确认变更范围无误。此步不写任何文件。"
+    },
+    {
+      "step": 3,
+      "action": "执行归档事务",
+      "command": "python AI工具链/tools/spec_tool.py archive --module {module} --version {vX.Y.Z} --subcategory {subCategory} --description \"{描述}\" --type {major|minor|patch} --apply",
+      "logic": "工具按固定顺序执行：加 change/.archive.lock → C1-C8 校验 → 合并 spec（原子写 + .bak）→ 移动文档 → 更新模块 version.json 与全局 versions.json → 清空 _tmp。任一步异常自动回滚到归档前状态。"
+    },
+    {
+      "step": 4,
+      "action": "把工具输出原文回给用户",
+      "logic": "必须附上工具 stdout（含校验结论、已合并条数、归档路径）。禁止只写『归档成功』而不给输出。"
+    },
+    {
+      "step": 5,
+      "action": "回写工作计划（若存在）",
+      "logic": "docs/WorkPlan_*.md 中匹配 module+subCategory 的行：`◐ 进行中 wip` → `✓ 已归档 → change/{module}/{subCategory}/ v{X.Y.Z}`，刷新进度统计。未匹配则跳过。"
+    }
+  ],
+  "output": {
+    "success": "已归档 {module}/{subCategory} v{X.Y.Z}；spec/{module}.md 已更新（R 条目 n 条）",
+    "blocked": "归档中止：退出码 1（校验失败，见 C1-C8）/ 3（缺基线或锁冲突）"
+  },
+  "tool_rules": {
+    "添加": "ADDED R{n} → spec 中写为 `## R{n} — 标题`（剥掉操作前缀，禁止出现 `## ADDED R3`）",
+    "修改": "MODIFIED R{n} → 整段替换（从 `## R{n}` 到下一个 `## ` 或 EOF），标题写为 `## R{n} — 新标题（MODIFIED v{X.Y.Z}）`",
+    "删除": "REMOVED R{n} → 删除该段",
+    "版本历史": "子分类 version.json 的 versions 数组按版本号去重**追加**，不整体覆盖——优化迭代必须保留历史记录",
+    "规格索引": "模块**首次**生成 spec 时，自动在 spec/README.md 索引追加一行（含基线来源与 R 范围）；已存在则不重复",
+    "归档戳": "spec 头部同时写描述性的 `由 change/... 生成（日期）` 与机器可读的 `最后归档 v{X.Y.Z} @ {date}`",
+    "幂等": "检测到 delta 已合并则跳过合并（支持中断后重跑）",
+    "顺序": "先合并 spec，再移动文档，最后更新索引——保证中断时真相源不落后于归档",
+    "撤销": "spec 旧版留 .bak；被覆盖的归档文档留 .owbak"
+  },
+  "guards": [
+    "没有 delta 且存在行为变更时禁止归档（工具不提供绕过开关）",
+    "校验失败禁止归档",
+    "禁止绕过本命令直接编辑 spec/{module}.md",
+    "禁止手工合并后再调用工具（会造成重复）",
+    "首次归档若既无 spec 也无 delta → 工具退出码 3，必须补 delta 或人工回填基线"
+  ],
+  "fallback": {
+    "condition": "环境无 Python 3",
+    "action": "按 tool_rules 手工执行，但必须：① 先备份 spec 为 .bak；② 合并后立即跑 `check-spec` 的等价人工检查（R 编号唯一、标题无 ADDED/MODIFIED 前缀）；③ 在 05-issues.md 记录『本次为手工归档，未经工具校验』"
+  }
+}
